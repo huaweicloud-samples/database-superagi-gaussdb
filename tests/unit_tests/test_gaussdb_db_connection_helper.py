@@ -67,3 +67,20 @@ def test_register_gaussdb_compat_replaces_empty_string_params():
         conn.execute(text("INSERT INTO t (v) VALUES (:v)"), {"v": ""})
         val = conn.execute(text("SELECT v FROM t")).scalar()
     assert val == " "
+
+
+def test_register_is_global_and_idempotent():
+    # Engine 类级注册：注册后新建的引擎（不经任何显式注册，对齐
+    # FastAPI DBSessionMiddleware 内部自建 engine 无法传参的场景）也必须
+    # 拦截空串；重复调用幂等不炸（同 target 重复 listen 会累积注册）。
+    from sqlalchemy import create_engine, text
+
+    h.register_gaussdb_compat(create_engine("sqlite://"))
+    h.register_gaussdb_compat(create_engine("sqlite://"))
+
+    eng = create_engine("sqlite://")   # 注册后新建，显式注册零调用
+    with eng.begin() as conn:
+        conn.execute(text("CREATE TABLE t (v VARCHAR(10))"))
+        conn.execute(text("INSERT INTO t (v) VALUES (:v)"), {"v": ""})
+        val = conn.execute(text("SELECT v FROM t")).scalar()
+    assert val == " "

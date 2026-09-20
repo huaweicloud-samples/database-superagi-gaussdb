@@ -1,5 +1,4 @@
 from sqlalchemy import create_engine
-from superagi.config.config import get_config
 from superagi.helper.db_connection_helper import build_database_url, register_gaussdb_compat
 from superagi.lib.logger import logger
 

@@ -12,9 +12,11 @@
 """
 from urllib.parse import quote, urlparse, urlunparse
 
-from sqlalchemy import event
+from sqlalchemy import Engine, event
 
 from superagi.config.config import get_config
+
+_compat_registered = False
 
 
 def build_database_url() -> str:
@@ -59,13 +61,25 @@ def _escape_empty_strings(parameters):
     return parameters
 
 
-def register_gaussdb_compat(engine) -> None:
-    """在 engine 上注册 GaussDB A 兼容模式所需的运行时行为修正。
+def register_gaussdb_compat(engine=None) -> None:
+    """全局注册 GaussDB A 兼容模式所需的运行时行为修正（Engine 类级）。
+
+    为什么类级：FastAPI 的 DBSessionMiddleware(db_url=...) 在内部自建 engine，
+    外部拿不到引用、无法对其显式注册；Engine 类级监听对已存在和未来创建的
+    所有 engine 实例统一生效。engine 参数仅为兼容旧调用点（main.py /
+    db.py 显式传参），不参与注册。
+
+    幂等：模块级 _compat_registered 防重复，重复调用直接 return
+    （同一 target 重复 listen 会累积注册多个监听器，必须防）。
 
     retval=True 必需：缺省时监听器返回值会被 SQLAlchemy 丢弃（拦截变 no-op）；
     带 retval 后返回值被无条件解包，因此必须恒返回 (statement, parameters) 二元组。
     """
+    global _compat_registered
+    if _compat_registered:
+        return
+    _compat_registered = True
 
-    @event.listens_for(engine, "before_cursor_execute", retval=True)
+    @event.listens_for(Engine, "before_cursor_execute", retval=True)
     def _convert_empty_strings(conn, cursor, statement, parameters, context, executemany):
         return statement, _escape_empty_strings(parameters)
