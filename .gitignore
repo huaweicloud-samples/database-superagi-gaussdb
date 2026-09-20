@@ -21,3 +21,13 @@ superagi/tools/marketplace_tools/
 superagi/tools/external_tools/
 tests/unit_tests/resource_manager/test_path
 /tools.json
+
+# --- GaussDB adaptation (Task 0) ---
+.venv-gauss/
+venv/
+config.yaml
+workspace/
+gui/node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
