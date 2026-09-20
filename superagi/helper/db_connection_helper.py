@@ -45,20 +45,27 @@ def escape_for_alembic_option(url: str) -> str:
 def _escape_empty_strings(parameters):
     """把 SQL 参数里的空串替换为单个空格（递归处理批量参数）。
 
-    只处理 str 类型：JSONB 列的 dict 参数、None、数字等不受影响。
+    dict 是命名参数：只替换顶层的 str 值，不递归进嵌套 dict
+    （JSONB 列的 dict 参数是内容本身，其中的空串不能动）。
+    list/tuple 是批量参数或位置参数（psycopg2 format/qmark 方言把
+    位置参数交给 cursor 时是 tuple）：逐元素递归，裸空串也必须替换。
     """
     if isinstance(parameters, dict):
         return {k: (' ' if isinstance(v, str) and v == '' else v) for k, v in parameters.items()}
     if isinstance(parameters, (list, tuple)):
         return type(parameters)(_escape_empty_strings(p) for p in parameters)
+    if isinstance(parameters, str) and parameters == '':
+        return ' '
     return parameters
 
 
 def register_gaussdb_compat(engine) -> None:
-    """在 engine 上注册 GaussDB A 兼容模式所需的运行时行为修正。"""
+    """在 engine 上注册 GaussDB A 兼容模式所需的运行时行为修正。
 
-    @event.listens_for(engine, "before_cursor_execute")
+    retval=True 必需：缺省时监听器返回值会被 SQLAlchemy 丢弃（拦截变 no-op）；
+    带 retval 后返回值被无条件解包，因此必须恒返回 (statement, parameters) 二元组。
+    """
+
+    @event.listens_for(engine, "before_cursor_execute", retval=True)
     def _convert_empty_strings(conn, cursor, statement, parameters, context, executemany):
-        new_params = _escape_empty_strings(parameters)
-        if new_params is not parameters:
-            return statement, new_params
+        return statement, _escape_empty_strings(parameters)

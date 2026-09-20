@@ -1,5 +1,3 @@
-import pytest
-
 from superagi.helper import db_connection_helper as h
 
 
@@ -47,5 +45,25 @@ def test_escape_empty_strings_in_batch():
 
 
 def test_escape_for_alembic_option():
-    url = "opengauss+psycopg2://u:p%40ss@h:5432/db"
-    assert h.escape_for_alembic_option(url) == url.replace("%", "%%")
+    assert h.escape_for_alembic_option("opengauss+psycopg2://u:p%40ss@h:5432/db") == "opengauss+psycopg2://u:p%%40ss@h:5432/db"
+
+
+def test_escape_empty_strings_in_positional_params():
+    out = h._escape_empty_strings(("", "x", None))
+    assert out == (" ", "x", None)
+
+
+def test_register_gaussdb_compat_replaces_empty_string_params():
+    # 回归锁：监听器须按 retval 事件契约恒返回二元组，且位置参数
+    # （qmark/format 方言在 cursor 层是 tuple）里的空串被替换。
+    # 2.0.16 实证 dispatch 集合 __call__ 不返回结果，故走真实 engine
+    # INSERT 端到端断言（若监听器返回 None，调用点解包会直接 TypeError）。
+    from sqlalchemy import create_engine, text
+
+    eng = create_engine("sqlite://")
+    h.register_gaussdb_compat(eng)
+    with eng.begin() as conn:
+        conn.execute(text("CREATE TABLE t (v VARCHAR(10))"))
+        conn.execute(text("INSERT INTO t (v) VALUES (:v)"), {"v": ""})
+        val = conn.execute(text("SELECT v FROM t")).scalar()
+    assert val == " "
