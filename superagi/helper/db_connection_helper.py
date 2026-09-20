@@ -33,7 +33,7 @@ def build_database_url() -> str:
     db_name = get_config('DB_NAME')
     if db_username is None:
         return f'opengauss+psycopg2://{db_host}/{db_name}'
-    return (f'opengauss+psycopg2://{quote(str(db_username))}:'
+    return (f'opengauss+psycopg2://{quote(str(db_username), safe="")}:'
             f'{quote(str(db_password or ""), safe="")}@{db_host}:{db_port}/{db_name}')
 
 
