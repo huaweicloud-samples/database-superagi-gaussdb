@@ -3,7 +3,7 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context
-from urllib.parse import urlparse
+from superagi.helper.db_connection_helper import build_database_url, escape_for_alembic_option
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -21,18 +21,11 @@ if config.config_file_name is not None:
 from superagi.models.base_model import DBBaseModel
 target_metadata = DBBaseModel.metadata
 from superagi.models import *
-from superagi.config.config import get_config
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
-
-db_host = get_config('DB_HOST', 'super__postgres')
-db_username = get_config('DB_USERNAME')
-db_password = get_config('DB_PASSWORD')
-db_name = get_config('DB_NAME')
-database_url = get_config('DB_URL', None)
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -47,17 +40,7 @@ def run_migrations_offline() -> None:
 
     """
 
-    db_url = database_url
-    if db_url is None:
-        if db_username is None:
-            db_url = f'postgresql://{db_host}/{db_name}'
-        else:
-            db_url = f'postgresql://{db_username}:{db_password}@{db_host}/{db_name}'
-    else:
-        db_url = urlparse(db_url)
-        db_url = db_url.scheme + "://" + db_url.netloc + db_url.path
-
-    config.set_main_option("sqlalchemy.url", db_url)
+    config.set_main_option("sqlalchemy.url", escape_for_alembic_option(build_database_url()))
 
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
@@ -79,22 +62,7 @@ def run_migrations_online() -> None:
 
     """
 
-    db_host = get_config('DB_HOST', 'super__postgres')
-    db_username = get_config('DB_USERNAME')
-    db_password = get_config('DB_PASSWORD')
-    db_name = get_config('DB_NAME')
-    db_url = get_config('DB_URL', None)
-
-    if db_url is None:
-        if db_username is None:
-            db_url = f'postgresql://{db_host}/{db_name}'
-        else:
-            db_url = f'postgresql://{db_username}:{db_password}@{db_host}/{db_name}'
-    else:
-        db_url = urlparse(db_url)
-        db_url = db_url.scheme + "://" + db_url.netloc + db_url.path
-        
-    config.set_main_option('sqlalchemy.url', db_url)
+    config.set_main_option('sqlalchemy.url', escape_for_alembic_option(build_database_url()))
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",

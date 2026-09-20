@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from superagi.config.config import get_config
-from urllib.parse import urlparse
+from superagi.helper.db_connection_helper import build_database_url, register_gaussdb_compat
 from superagi.lib.logger import logger
 
 engine = None
@@ -8,7 +8,7 @@ engine = None
 
 def connect_db():
     """
-    Connects to the PostgreSQL database using SQLAlchemy.
+    Connects to the database using SQLAlchemy (GaussDB 507 compatible).
 
     Returns:
         engine: The SQLAlchemy engine object representing the database connection.
@@ -18,22 +18,7 @@ def connect_db():
     if engine is not None:
         return engine
 
-    # Create the connection URL
-    db_host = get_config('DB_HOST', 'super__postgres')
-    db_username = get_config('DB_USERNAME')
-    db_password = get_config('DB_PASSWORD')
-    db_name = get_config('DB_NAME')
-    db_url = get_config('DB_URL', None)
-
-    if db_url is None:
-        if db_username is None:
-            db_url = f'postgresql://{db_host}/{db_name}'
-        else:
-            db_url = f'postgresql://{db_username}:{db_password}@{db_host}/{db_name}'
-    else:
-        db_url = urlparse(db_url)
-        db_url = db_url.scheme + "://" + db_url.netloc + db_url.path
-    # Create the SQLAlchemy engine
+    db_url = build_database_url()
     engine = create_engine(db_url,
                            pool_size=20,  # Maximum number of database connections in the pool
                            max_overflow=50,  # Maximum number of connections that can be created beyond the pool_size
@@ -41,6 +26,7 @@ def connect_db():
                            pool_recycle=1800,  # Recycle connections after this number of seconds (optional)
                            pool_pre_ping=False,  # Enable connection health checks (optional)
                            )
+    register_gaussdb_compat(engine)
 
     # Test the connection
     try:
