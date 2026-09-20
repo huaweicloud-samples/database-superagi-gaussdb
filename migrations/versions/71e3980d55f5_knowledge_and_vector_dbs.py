@@ -83,5 +83,6 @@ def downgrade() -> None:
     op.drop_table('vector_dbs')
     op.drop_table('vector_db_indices')
     op.drop_table('vector_db_configs')
+    op.drop_table('marketplace_stats')
     op.drop_table('knowledges')
     op.drop_table('knowledge_configs')

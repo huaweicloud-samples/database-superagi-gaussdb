@@ -21,4 +21,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_column('agent_templates', sa.Column('marketplace_template_id', sa.Integer(), nullable=True))
+    op.drop_column('agent_templates', 'marketplace_template_id')

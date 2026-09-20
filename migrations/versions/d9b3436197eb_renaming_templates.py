@@ -28,7 +28,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.rename_table('agent_workflows', 'agent_templates')
     op.rename_table('agent_workflow_steps', 'agent_template_steps')
-    with op.batch_alter_table('agent_templates') as bop:
+    with op.batch_alter_table('agent_template_steps') as bop:
         bop.alter_column('agent_workflow_id', new_column_name='agent_template_id')
     with op.batch_alter_table('agents') as bop:
         bop.alter_column('agent_workflow_id', new_column_name='agent_template_id')
