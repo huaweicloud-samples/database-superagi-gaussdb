@@ -48,6 +48,10 @@ class LlamaVectorStoreFactory:
             chroma_collection = chroma_client.get_or_create_collection(self.index_name)
             return ChromaVectorStore(chroma_collection)
 
+        if self.vector_store_name == VectorStoreType.GAUSSDB:
+            from superagi.vector_store.llama_gaussdb import LlamaGaussDBVectorStore
+            return LlamaGaussDBVectorStore(self.index_name)
+
         if self.vector_store_name == VectorStoreType.QDRANT:
             from llama_index.vector_stores import QdrantVectorStore
             qdrant_host_name = get_config("QDRANT_HOST_NAME") or "localhost"

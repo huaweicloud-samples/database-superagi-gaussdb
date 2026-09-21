@@ -1,6 +1,6 @@
 import pytest
 
-from superagi.vector_store.gaussdb import GaussDB, calc_pq_nseg, _table_ddl, _index_ddl
+from superagi.vector_store.gaussdb import GaussDB, calc_pq_nseg, _table_ddl, _index_ddl, _vec_literal
 
 
 class FakeEmbedding:
@@ -55,3 +55,15 @@ def test_table_name_validation():
         GaussDB("bad name; DROP TABLE x", FakeEmbedding())
     with pytest.raises(ValueError):
         GaussDB("", FakeEmbedding())
+
+
+def test_vec_literal_special_floats():
+    assert _vec_literal([1.0, 0.5]) == "[1.0,0.5]"
+    assert _vec_literal([1e-320]).startswith("[")   # 极小值走科学计数法，格式合法即可
+
+
+def test_add_texts_empty_list_is_noop():
+    store = GaussDB("noop_test_table", FakeEmbedding(),
+                    db_url="sqlite://")   # 不连真库；空列表短路在 ensure 之前返回
+    assert store.add_texts([]) == []
+    assert store.add_embeddings_to_vector_db({"vectors": []}) is None

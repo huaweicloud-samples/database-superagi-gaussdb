@@ -45,3 +45,6 @@ class VectorEmbeddingFactory:
         
         if vector_store == VectorStoreType.WEAVIATE:
             return Weaviate(uuid, embeds, metadata)
+
+        if vector_store == VectorStoreType.GAUSSDB:
+            return Pinecone(uuid, embeds, metadata)

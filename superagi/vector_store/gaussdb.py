@@ -112,10 +112,14 @@ class GaussDB(VectorStore):
                   ids: Optional[List[str]] = None,
                   **kwargs: Any) -> List[str]:
         texts = list(texts)
+        if not texts:
+            return []
         ids = ids or [str(uuid.uuid4()) for _ in texts]
         metadatas = [metadatas[i] if metadatas and i < len(metadatas) else {} for i in range(len(texts))]
         if embeddings is None:
             embeddings = [self.embedding_model.get_embedding(t) for t in texts]
+        if len(ids) != len(texts) or (embeddings is not None and len(embeddings) != len(texts)):
+            raise ValueError("Number of ids/embeddings must match number of texts.")
         self._ensure_schema(len(embeddings[0]))
         with self.engine.begin() as conn:
             for i in range(len(texts)):
@@ -133,6 +137,8 @@ class GaussDB(VectorStore):
         metadata 过滤走 JSONB ->> 比较。注意：过滤条件不在向量索引内
         生效（索引后过滤），命中数可能少于 top_k，见交付注意事项。
         """
+        if not embedding:
+            return []
         self._ensure_schema(len(embedding))
         params: dict = {"q": _vec_literal(embedding), "k": top_k}
         where = ""
@@ -178,14 +184,17 @@ class GaussDB(VectorStore):
         {"vectors": [(id, embedding, metadata), ...]}（pinecone 形态）
         {"ids": [...], "vectors": [...], "payloads": [...]}（qdrant 形态）
         """
+        vectors = embeddings.get("vectors") or []
+        if not vectors:
+            return
         if "ids" in embeddings and "payloads" in embeddings:
             ids = embeddings["ids"]
             vectors = embeddings["vectors"]
             payloads = embeddings["payloads"]
         else:
-            ids = [v[0] for v in embeddings["vectors"]]
-            vectors = [v[1] for v in embeddings["vectors"]]
-            payloads = [v[2] for v in embeddings["vectors"]]
+            ids = [v[0] for v in vectors]
+            vectors = [v[1] for v in vectors]
+            payloads = [v[2] for v in vectors]
         self._ensure_schema(len(vectors[0]))
         with self.engine.begin() as conn:
             for tid, emb, meta in zip(ids, vectors, payloads):
