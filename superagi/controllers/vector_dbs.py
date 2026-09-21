@@ -121,6 +121,23 @@ def connect_weaviate_vector_db(data: dict, organisation = Depends(get_user_organ
 
     return {"id": weaviate_db.id, "name": weaviate_db.name}
 
+@router.post("/connect/gaussdb")
+def connect_gaussdb_vector_db(data: dict, organisation = Depends(get_user_organisation)):
+    db_creds = {"url": data.get("url", "")}
+    for collection in data["collections"]:
+        try:
+            vector_db_storage = VectorFactory.build_vector_storage("gaussdb", collection, **db_creds)
+            db_connect_for_index = vector_db_storage.get_index_stats()
+            index_state = "Custom" if db_connect_for_index["vector_count"] > 0 else "None"
+            dimensions = db_connect_for_index.get("dimensions")
+        except Exception:
+            raise HTTPException(status_code=400, detail="Unable to connect GaussDB")
+    gaussdb_db = Vectordbs.add_vector_db(db.session, data["name"], "GaussDB", organisation)
+    VectordbConfigs.add_vector_db_config(db.session, gaussdb_db.id, db_creds)
+    for collection in data["collections"]:
+        VectordbIndices.add_vector_index(db.session, collection, gaussdb_db.id, index_state, dimensions)
+    return {"id": gaussdb_db.id, "name": gaussdb_db.name}
+
 @router.put("/update/vector_db/{vector_db_id}")
 def update_vector_db(new_indices: list, vector_db_id: int):
     vector_db = Vectordbs.get_vector_db_from_id(db.session, vector_db_id)

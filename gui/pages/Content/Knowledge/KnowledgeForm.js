@@ -26,6 +26,7 @@ export default function KnowledgeForm({
   const [pinconeIndices, setPineconeIndices] = useState([]);
   const [qdrantIndices, setQdrantIndices] = useState([]);
   const [weaviateIndices, setWeaviateIndices] = useState([]);
+  const [gaussdbIndices, setGaussdbIndices] = useState([]);
 
   useEffect(() => {
     getValidIndices()
@@ -35,6 +36,7 @@ export default function KnowledgeForm({
           setPineconeIndices(data.pinecone || []);
           setQdrantIndices(data.qdrant || []);
           setWeaviateIndices(data.weaviate || []);
+          setGaussdbIndices(data.gaussdb || []);
         }
       })
       .catch((error) => {
@@ -236,6 +238,23 @@ export default function KnowledgeForm({
                   <div className={styles1.knowledge_db_name}>Weaviate</div>
                   {weaviateIndices.map((index) => (<div key={index.id} className="custom_select_option index_options"
                                                       onClick={() => handleIndexSelect(index)}>
+                    <div style={!checkIndexValidity(index.is_valid_state)[0] ? {
+                      color: '#888888',
+                      textDecoration: 'line-through',
+                      pointerEvents : 'none',
+                    } : {}}>{index.name}</div>
+                    {!checkIndexValidity(index.is_valid_state)[0] &&
+                      <div>
+                        <Image width={15} height={15} src="/images/info.svg" alt="info-icon"
+                               title={checkIndexValidity(index.is_valid_state)[1]}/>
+                      </div>}
+                  </div>))}
+                </div>}
+              {gaussdbIndices && gaussdbIndices.length > 0 &&
+                <div className={styles1.knowledge_db} style={{maxWidth: '100%'}}>
+                  <div className={styles1.knowledge_db_name}>GaussDB</div>
+                  {gaussdbIndices.map((index) => (<div key={index.id} className="custom_select_option index_options"
+                                                       onClick={() => handleIndexSelect(index)}>
                     <div style={!checkIndexValidity(index.is_valid_state)[0] ? {
                       color: '#888888',
                       textDecoration: 'line-through',

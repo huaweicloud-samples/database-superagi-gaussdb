@@ -74,7 +74,8 @@ class GaussDB(VectorStore):
             raise ValueError(f"Invalid GaussDB vector table (index) name: {index_name!r}")
         self.index_name = index_name
         self.embedding_model = embedding_model
-        url = db_url or get_config('GAUSSDB_VECTOR_DB_URL') or build_database_url()
+        # 空/空白 url 一律视为未提供（gdb_compat 会把空串存为 ' '，读回后同样回退）
+        url = (db_url or '').strip() or get_config('GAUSSDB_VECTOR_DB_URL') or build_database_url()
         self.engine = create_engine(url, pool_size=5, pool_pre_ping=True)
         self._ensured_dim = None
 
@@ -157,14 +158,21 @@ class GaussDB(VectorStore):
 
     def get_matching_text(self, query: str, top_k: int = 5,
                           metadata: Optional[dict] = None, **kwargs: Any) -> dict:
-        """返回 {"documents": [...]}（对齐现有后端返回形态）。"""
+        """返回 {"documents": [...], "search_res": ...}（对齐 pinecone/qdrant/weaviate 返回形态）。
+
+        search_res 为拼接文本（"Query: ...\\nChunk{i}: \\n{text}\\n"），与
+        pinecone._get_search_text 产出一致，供 KnowledgeSearchTool 直接使用。
+        """
         embed_text = self.embedding_model.get_embedding(query)
         rows = self.query_by_embedding(embed_text, top_k, metadata)
         documents = [
             Document(text_content=r[1], metadata={**(r[2] or {}), "id": r[0], "score": r[3]})
             for r in rows
         ]
-        return {"documents": documents}
+        search_res = f"Query: {query}\n"
+        for i, row in enumerate(rows):
+            search_res += f"Chunk{i}: \n{row[1]}\n"
+        return {"documents": documents, "search_res": search_res}
 
     def get_index_stats(self) -> dict:
         with self.engine.connect() as conn:

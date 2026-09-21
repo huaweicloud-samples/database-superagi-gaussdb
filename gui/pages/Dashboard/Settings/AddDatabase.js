@@ -13,7 +13,7 @@ import knowledgeStyles from "@/pages/Content/Knowledge/Knowledge.module.css";
 import styles from "@/pages/Content/Marketplace/Market.module.css";
 import Image from "next/image";
 import styles1 from "@/pages/Content/Agents/Agents.module.css";
-import {connectPinecone, connectQdrant, connectWeaviate, fetchVectorDBList} from "@/pages/api/DashboardService";
+import {connectPinecone, connectQdrant, connectWeaviate, connectGaussdb, fetchVectorDBList} from "@/pages/api/DashboardService";
 
 export default function AddDatabase({internalId, sendDatabaseDetailsData}) {
   const [activeView, setActiveView] = useState('select_database');
@@ -30,6 +30,8 @@ export default function AddDatabase({internalId, sendDatabaseDetailsData}) {
 
   const [weaviateApiKey, setWeaviateApiKey] = useState('');
   const [weaviateURL, setWeaviateURL] = useState('');
+
+  const [gaussdbURL, setGaussdbURL] = useState('');
 
   const [qdrantPort, setQdrantPort] = useState(8001);
   const [connectText, setConnectText] = useState('Connect');
@@ -85,18 +87,29 @@ export default function AddDatabase({internalId, sendDatabaseDetailsData}) {
       setWeaviateURL(weaviate_url);
     }
 
+    const gaussdb_url = localStorage.getItem('gaussdb_url_' + String(internalId));
+    if (gaussdb_url) {
+      setGaussdbURL(gaussdb_url);
+    }
+
   }, [internalId]);
 
   useEffect(() => {
     fetchVectorDBList()
       .then((response) => {
         const data = response.data || [];
+        if (!data.some((item) => item.name === 'GaussDB')) {
+          data.push({name: 'GaussDB'});
+        }
         setVectorDatabases(data);
         const selected_db = localStorage.getItem('selected_db_' + String(internalId));
         setSelectedDB(selected_db ? selected_db : data[0].name || '');
       })
       .catch((error) => {
         console.error('Error fetching vector databases:', error);
+        setVectorDatabases([{name: 'GaussDB'}]);
+        const selected_db = localStorage.getItem('selected_db_' + String(internalId));
+        setSelectedDB(selected_db ? selected_db : 'GaussDB');
       });
   }, [internalId]);
 
@@ -130,6 +143,10 @@ export default function AddDatabase({internalId, sendDatabaseDetailsData}) {
 
   const handleWeaviateURLChange = (event) => {
     setLocalStorageValue('weaviate_url_' + String(internalId), event.target.value, setWeaviateURL);
+  }
+
+  const handleGaussdbURLChange = (event) => {
+    setLocalStorageValue('gaussdb_url_' + String(internalId), event.target.value, setGaussdbURL);
   }
 
   const addCollection = () => {
@@ -266,6 +283,26 @@ export default function AddDatabase({internalId, sendDatabaseDetailsData}) {
           setConnectText("Connect");
         });
     }
+
+    if (selectedDB === 'GaussDB') {
+      setConnectText("Connecting...");
+
+      const gaussdbData = {
+        "name": databaseName,
+        "collections": collections,
+        "url": gaussdbURL,
+      }
+
+      connectGaussdb(gaussdbData)
+        .then((response) => {
+          connectResponse(response.data);
+        })
+        .catch((error) => {
+          toast.error("Unable to connect database", {autoClose: 1800});
+          console.error('Error fetching vector databases:', error);
+          setConnectText("Connect");
+        });
+    }
   }
 
   const proceedAddDatabase = () => {
@@ -388,6 +425,12 @@ export default function AddDatabase({internalId, sendDatabaseDetailsData}) {
             <div className="mt_15">
               <label className={styles1.form_label}>Weaviate URL</label>
               <input className="input_medium" type="text" value={weaviateURL} onChange={handleWeaviateURLChange}/>
+            </div>
+          </div>}
+          {selectedDB === 'GaussDB' && <div>
+            <div className="mt_15">
+              <label className={styles1.form_label}>GaussDB URL (leave empty to use the meta database instance)</label>
+              <input className="input_medium" type="text" value={gaussdbURL} onChange={handleGaussdbURLChange}/>
             </div>
           </div>}
           <div style={{display: 'flex', justifyContent: 'flex-end', marginTop: '15px'}}>

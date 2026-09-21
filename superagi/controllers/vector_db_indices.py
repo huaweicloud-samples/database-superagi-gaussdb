@@ -38,6 +38,7 @@ def get_user_valid_indices(organisation = Depends(get_user_organisation)):
     pinecone = []
     qdrant = []
     weaviate = []
+    gaussdb = []
     for vector_db in vector_dbs:
         indices =  VectordbIndices.get_vector_indices_from_vectordb(db.session, vector_db.id)
         for index in indices:
@@ -49,4 +50,6 @@ def get_user_valid_indices(organisation = Depends(get_user_organisation)):
                 qdrant.append(data)
             if vector_db.db_type == "Weaviate":
                 weaviate.append(data)
-    return {"pinecone": pinecone, "qdrant": qdrant, "weaviate": weaviate}
+            if vector_db.db_type == "GaussDB":
+                gaussdb.append(data)
+    return {"pinecone": pinecone, "qdrant": qdrant, "weaviate": weaviate, "gaussdb": gaussdb}

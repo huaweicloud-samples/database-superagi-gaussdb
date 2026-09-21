@@ -272,6 +272,10 @@ export const connectWeaviate = (weaviateData) => {
   return api.post(`/vector_dbs/connect/weaviate`, weaviateData);
 };
 
+export const connectGaussdb = (gaussdbData) => {
+  return api.post(`/vector_dbs/connect/gaussdb`, gaussdbData);
+};
+
 export const getKnowledge = () => {
   return api.get(`/knowledges/user/list`);
 };

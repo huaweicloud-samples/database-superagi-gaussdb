@@ -62,6 +62,13 @@ def test_hyphenated_index_name_allowed():
     GaussDB("super-agent-index1", FakeEmbedding(), db_url="sqlite://")
 
 
+def test_blank_db_url_falls_back():
+    # 空白 url 视为未提供：留空注册后 config 存为 ' '（gdb_compat 行为），读回重建时
+    # 不能 create_engine(' ') 崩溃，应回退到配置/元数据库连接
+    GaussDB("blank_url_test_table", FakeEmbedding(), db_url="   ")
+    GaussDB("blank_url_test_table", FakeEmbedding(), db_url="")
+
+
 def test_vec_literal_special_floats():
     assert _vec_literal([1.0, 0.5]) == "[1.0,0.5]"
     assert _vec_literal([1e-320]).startswith("[")   # 极小值走科学计数法，格式合法即可
@@ -72,3 +79,21 @@ def test_add_texts_empty_list_is_noop():
                     db_url="sqlite://")   # 不连真库；空列表短路在 ensure 之前返回
     assert store.add_texts([]) == []
     assert store.add_embeddings_to_vector_db({"vectors": []}) is None
+
+
+def test_get_matching_text_returns_search_res(monkeypatch):
+    # 对齐 pinecone.py:101 形态：get_matching_text 需同时返回 documents 与 search_res
+    # （knowledge_search.py:57 消费 result['search_res']）
+    store = GaussDB("search_res_test_table", FakeEmbedding(), db_url="sqlite://")
+    rows = [("id-1", "alpha text", {"k": "v"}, 0.9), ("id-2", "beta text", None, 0.5)]
+    monkeypatch.setattr(store, "query_by_embedding",
+                        lambda embedding, top_k=5, metadata=None: rows)
+
+    result = store.get_matching_text("hello", top_k=2)
+
+    assert "documents" in result and "search_res" in result
+    assert result["documents"][0].text_content == "alpha text"
+    assert result["documents"][0].metadata["id"] == "id-1"
+    assert result["search_res"].startswith("Query: hello\n")
+    assert "Chunk0: \nalpha text\n" in result["search_res"]
+    assert "Chunk1: \nbeta text\n" in result["search_res"]
