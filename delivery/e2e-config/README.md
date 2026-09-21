@@ -171,3 +171,90 @@ thought 文本，`<+>` 自检索 score=0.9998 命中。）
 ## 7. 产品代码问题清单
 
 无未修问题。上述 1-4 为产品代码适配（各自独立 commit）；5-8 为环境级方案（不涉及产品代码）。
+
+## 8. 分布式形态（Task 12）
+
+与集中式同一脚本（`t6_e2e_boot.py`）、同一 14 项验收标准，跑在分布式 GaussDB 上：
+
+- 目标库：`opengauss+psycopg2://appuser:Huawei%40123@127.0.0.1:15400/super_agi_dist`
+  （容器 `gaussdb-dist-min`，DBCOMPATIBILITY='ORA'，迁移 39 表，alembic_version 表为
+  DISTRIBUTE BY REPLICATION 预建——**不要 DROP/reset**；向量 floatvector 硬限 1024 维）
+- 运行命令（与集中式手动流程完全隔离）：
+
+```powershell
+# 独立 redis 实例（与集中式 6379 完全隔离，worker.py 是 "redis://"+REDIS_URL+"/0" 拼接，换实例即隔离）
+docker run -d --name superagi-dist-redis -p 6380:6379 redis:7
+
+& .\.venv-e2e\Scripts\python.exe delivery\tests\t6_e2e_boot.py `
+    'opengauss+psycopg2://appuser:Huawei%40123@127.0.0.1:15400/super_agi_dist' 8002 '127.0.0.1:6380'
+```
+
+argv[1]=DB URL、argv[2]=uvicorn 端口（8002，集中式手动流程占用 8001）、argv[3]=redis
+（纯数字=同实例换 db 号；`host:port`=独立实例）。隔离机制是**环境变量注入**而非改
+config.yaml：`superagi/config/config.py` 的 `load_config` 用 `dict(os.environ)` 整体覆盖
+yaml，t6 给 uvicorn/celery 子进程注入 `DB_URL`（元数据+两张向量表连接）与
+`REDIS_URL=127.0.0.1:6380`（broker/backend 队列隔离），config.yaml 保持指向集中式不动。
+
+### 8.1 分布式运行结果（2026-09-21，全部 PASS，exit=0）
+
+```
+[PASS] boot: uvicorn main:app ready at http://127.0.0.1:8002 (GaussDB e2e db)
+[PASS] boot: celery worker (superagi.worker, --pool=solo) alive
+[PASS] auth: user+org created (org_id=2), /login JWT issued and validated
+[PASS] model source registered: provider OpenAI(api_key=ollama) + models row qwen3:4b (provider_id=2)
+[PASS] agent created id=4 (Goal Based Workflow, model qwen3:4b, LTM_DB=GAUSSDB), initial execution id=6
+[PASS] resource uploaded: 05-capacity-planning.txt (9833 bytes, real demo-docs markdown content as .txt, resource_id=3; summarize_resource queued -> GAUSSDB super_agi_vectors)
+[PASS] execution triggered: id=7 status=RUNNING (execute_agent.delay via celery+redis)
+[PASS] agent_execution_feeds populated: rows=3 (celery -> AgentExecutor -> Ollama qwen3:4b)
+[PASS] execution reached terminal status: COMPLETED
+[PASS] events JSONB queryable: event_name=run_created event_property={"agent_execution_id": 7, "agent_execution_name": "e2e-dist-run-1"}
+[PASS] LTM GaussDB vector table super-agent-index1: rows=3, dim=1024, index=GsIVFFLAT, <+> self-retrieval score=0.9996
+[PASS] resource vector table super_agi_vectors: rows=14, dim=1024, index=GsIVFFLAT, semantic hit on demo-docs: query='磁盘水位红色阈值' top_score=0.6850, top_text='1 个物理核是 OLTP 的安全线；批处理占比高的库放宽到 1:2.5。核数天花板出现前，先看 `cpu_iowait`：持续 > 15% 说明瓶颈在磁盘不在 '
+[PASS] cross-db check: central db untouched (tables=41 before=41, agents=1->1, no 'e2e-dist-agent'/'e2e-dist-run-1' rows leaked)
+[PASS] E2E: boot + agent run + feeds/events + vector on GaussDB (Ollama local models, target=super_agi_dist@15400, uvicorn:8002)
+```
+
+资源场景使用真实文档 `demo-docs/05-capacity-planning.md`（数据库容量规划与平滑扩容，
+9833 字节），经 SimpleDirectoryReader → SimpleNodeParser（GPT2 分词，1024 token 分块）
+切成 7 块全部写入 super_agi_vectors（dim=1024，metadata 含 agent_id/resource_id）。
+
+**demo-docs 语义检索证据**（阈值块 = 「3.1 三级水位阈值」表所在 chunk，id 前缀 03a899ef）：
+
+| query | 阈值块排名 | score |
+|---|---|---|
+| `磁盘水位红色阈值` | 1/7（两次重复 embed 稳定） | 0.6835 |
+| `磁盘水位超过多少需要启动紧急扩容流程` | 1/7 | 0.7289 |
+| `database disk usage red alert threshold` | 1/7 | 0.6235 |
+
+阈值块完整文本含：`| 黄 | 70% ~ 85% | 触发扩容评审，冻结大表无索引变更 | | 红 | > 85% |
+启动紧急扩容流程…`（块前缀为 2.3 节 cpu_iowait 尾段，GPT2 token 分块的相邻衔接）。
+
+### 8.2 分布式与集中式差异清单
+
+| 项 | 集中式（Task 9） | 分布式（Task 12） |
+|---|---|---|
+| 目标库 | super_agi_e2e@5432（A 兼容） | super_agi_dist@15400（ORA，向量硬限 1024 维） |
+| 库状态 | e2e 独立库，迁移即时跑 | 预迁移 39 表（alembic_version 预建，不可 reset） |
+| uvicorn 端口 | 8001 | 8002（与手动流程隔离） |
+| Redis | 6379 db0（独立容器） | 6380 db0（独立容器 superagi-dist-redis） |
+| 配置方式 | config.yaml | 环境变量注入 DB_URL/REDIS_URL（yaml 不动） |
+| 资源 | 合成 e2e_note.txt（1 块） | demo-docs 真实 Markdown（7 块，语义检索验证） |
+| 向量表结构 | 1024 维 floatvector + GsIVFFLAT | 相同（`_ivf` 索引名一致） |
+| 隔离保障 | 自身即控制库 | 结束时交叉检查集中式库表数/对象未变 |
+
+### 8.3 Task 12 发现与修复
+
+1. **`.md` 上传被拒（产品限制，未改）**：`superagi/controllers/resources.py:60`
+   `accepted_file_types` 硬编码 `(.pdf/.docx/.pptx/.csv/.txt/.epub)`，`/resources/add`
+   对 `.md` 返回 400 "File type not supported!"。t6 以 `.txt` 扩展名上传真实 Markdown
+   内容绕过（解析/分块/向量链路不变，仅 MarkdownReader 按节切变为 token 分块）。
+2. **llama_gaussdb `add()` 返回值（产品代码校准，独立 commit）**：llama_index 0.6.35
+   `VectorStoreIndex._add_nodes_to_index` 先 `new_ids = vector_store.add(...)`（数据已
+   成功写入）再 `zip(embedding_results, new_ids)`；`LlamaGaussDBVectorStore.add` 返回
+   None 导致每次 summarize 在写入成功后抛 `'NoneType' object is not iterable`
+   （被 resource_manager 的宽 except 吞掉，功能无损但日志报错）。修复：`add()` 返回
+   `GaussDB.add_texts` 的 ids 列表。
+3. **hf-mirror SSL 抖动拖垮 summarize（环境级）**：GPT2TokenizerFast 初始化的 HEAD
+   请求在镜像抖动时重试 5 次全败（MaxRetryError）。t6 注入 `TRANSFORMERS_OFFLINE=1` +
+   `HF_HUB_OFFLINE=1` 强制走本地缓存（gpt2 分词器 5 文件已在 `~/.cache/huggingface`），
+   与网络状态彻底解耦。
