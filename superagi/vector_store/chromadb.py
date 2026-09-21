@@ -1,8 +1,12 @@
 import uuid
 from typing import Any, Optional, Iterable, List
 
-import chromadb
-from chromadb import Settings
+try:
+    import chromadb
+    from chromadb import Settings
+except ImportError:  # chromadb (via hnswlib) needs a C++ toolchain; defer failure until actually used
+    chromadb = None
+    Settings = None
 
 from superagi.config.config import get_config
 from superagi.vector_store.base import VectorStore
@@ -10,6 +14,8 @@ from superagi.vector_store.document import Document
 from superagi.vector_store.embedding.base import BaseEmbedding
 
 def _build_chroma_client():
+    if chromadb is None:
+        raise ImportError("chromadb is not installed (requires a C++ build toolchain)")
     chroma_host_name = get_config("CHROMA_HOST_NAME") or "localhost"
     chroma_port = get_config("CHROMA_PORT") or 8000
     return chromadb.Client(Settings(chroma_api_impl="rest", chroma_server_host=chroma_host_name,
