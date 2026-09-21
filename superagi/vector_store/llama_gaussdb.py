@@ -20,9 +20,12 @@ class LlamaGaussDBVectorStore:
     def client(self) -> Any:
         return self._store.engine
 
-    def add(self, embedding_results) -> None:
+    def add(self, embedding_results) -> List[str]:
         """embedding_results: llama_index NodeWithEmbedding 列表（dataclass：
-        字段 node/embedding，id 为 property（node.node_id）），node 取 get_content()。"""
+        字段 node/embedding，id 为 property（node.node_id）），node 取 get_content()。
+        返回 ids：llama_index 0.6.35 的 _add_nodes_to_index 会 zip(embedding_results,
+        new_ids)，add() 返回 None 会在写入成功后抛 'NoneType' object is not iterable。
+        """
         texts, metas, embs, ids = [], [], [], []
         for r in embedding_results:
             node = r.node
@@ -30,7 +33,7 @@ class LlamaGaussDBVectorStore:
             metas.append(dict(node.metadata or {}))
             embs.append(r.embedding)
             ids.append(r.id)
-        self._store.add_texts(texts, metadatas=metas, embeddings=embs, ids=ids)
+        return self._store.add_texts(texts, metadatas=metas, embeddings=embs, ids=ids)
 
     def delete(self, ref_doc_id: str, **delete_kwargs) -> None:
         self._store.delete_embeddings_from_vector_db([ref_doc_id])
