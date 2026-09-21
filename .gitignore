@@ -32,3 +32,7 @@ gui/node_modules/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# --- e2e test run artifacts (Task 9/12/13) ---
+delivery/tests/_t6_logs/
+delivery/tests/_t7_*.log
