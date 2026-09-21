@@ -1,11 +1,13 @@
-"""T3: ORM CRUD + 空串拦截验证。用法: venv-gauss python t3_crud_empty_string.py"""
+"""T3: ORM CRUD + 空串拦截验证。用法: venv-gauss python t3_crud_empty_string.py [TARGET_URL]"""
 import os
 import sys
 
 # 必须在 import superagi 之前设置：config.py 在 import 时用 os.environ 快照
 # 构造 _config_instance，之后设置环境变量不会生效；encyption_helper 在
 # import 时也要求 ENCRYPTION_KEY（32 字符）。
-os.environ["DB_URL"] = "opengauss+psycopg2://superagi_test:GaussTest2026@127.0.0.1:5432/super_agi_test"
+TARGET_URL = sys.argv[1] if len(sys.argv) > 1 else \
+    "opengauss+psycopg2://superagi_test:GaussTest2026@127.0.0.1:5432/super_agi_test"
+os.environ["DB_URL"] = TARGET_URL
 os.environ["ENCRYPTION_KEY"] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 
 sys.path.insert(0, r"D:\workplace\code\SuperAGI\SuperAGI-0.0.14")

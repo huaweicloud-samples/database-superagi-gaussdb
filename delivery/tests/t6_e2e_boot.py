@@ -2,7 +2,7 @@
 """Task 9 t6: 端到端验收 —— SuperAGI 双进程（uvicorn + celery）在 GaussDB 上用 Ollama 本地模型跑通一次 Agent 执行。
 
 流程：
-  1. 启动 uvicorn（main:app, 127.0.0.1:8001）
+  1. 启动 uvicorn（main:app, 默认 127.0.0.1:8001，可 E2E_PORT 覆盖）
   2. 启动 celery worker（superagi.worker, --pool=solo）
   3. /users/add 注册（DEV 自动建 org+project）→ /login 拿 JWT
   4. 登记 OpenAI provider（api_key=ollama）+ models 行（qwen3:4b）
@@ -18,15 +18,23 @@ import subprocess
 import sys
 import time
 from datetime import datetime
+from urllib.parse import unquote, urlparse
 
 import psycopg2
 import requests
 
 ROOT = r"D:\workplace\code\SuperAGI\SuperAGI-0.0.14"
-BASE = "http://127.0.0.1:8001"
+# 目标参数化：argv[1..3] 优先，环境变量 E2E_URL / E2E_PORT / E2E_REDIS_DB 兜底，
+# 默认值保持集中式现状（super_agi_e2e @5432、uvicorn 8001、redis db 0）。
+E2E_URL = sys.argv[1] if len(sys.argv) > 1 else os.environ.get(
+    "E2E_URL", "opengauss+psycopg2://superagi_test:GaussTest2026@127.0.0.1:5432/super_agi_e2e")
+E2E_PORT = sys.argv[2] if len(sys.argv) > 2 else os.environ.get("E2E_PORT", "8001")
+E2E_REDIS_DB = sys.argv[3] if len(sys.argv) > 3 else os.environ.get("E2E_REDIS_DB", "0")
+_p = urlparse(E2E_URL)
+DB = dict(host=_p.hostname, port=_p.port or 5432, user=_p.username,
+          password=unquote(_p.password), dbname=_p.path.lstrip("/"))
+BASE = f"http://127.0.0.1:{E2E_PORT}"
 LOGDIR = os.path.join(ROOT, "delivery", "tests", "_t6_logs")
-DB = dict(host="127.0.0.1", port=5432, user="superagi_test",
-          password="GaussTest2026", dbname="super_agi_e2e")
 OLLAMA = "http://localhost:11434/v1"
 GOAL = ["Introduce yourself and the database you run on in one short sentence."]
 INSTRUCTION = ["Answer in one short sentence.", "No tools are available, just answer directly."]
@@ -133,6 +141,15 @@ def main():
     env["OPENAI_API_BASE"] = "http://localhost:11434/v1"  # openai 库 import 期读该环境变量
     env["HF_ENDPOINT"] = "https://hf-mirror.com"  # py3.8 下 llama_index 用 transformers GPT2 分词器，走可达镜像
     env["PYTHONUNBUFFERED"] = "1"
+    if E2E_REDIS_DB != "0":
+        # superagi config 环境变量优先于 config.yaml；注意 superagi/worker.py 的
+        # broker_url/result_backend 硬编码追加 "/0"，非 0 db 在产品代码放开前不会真正生效。
+        import yaml
+        with open(os.path.join(ROOT, "config.yaml"), "r", encoding="utf-8") as f:
+            _redis_base = (yaml.safe_load(f) or {}).get("REDIS_URL", "127.0.0.1:6379")
+        env["REDIS_URL"] = f"{_redis_base}/{E2E_REDIS_DB}"
+        print(f"  [warn] E2E_REDIS_DB={E2E_REDIS_DB}: injected REDIS_URL={env['REDIS_URL']} "
+              f"(worker.py hardcodes broker '/0' — non-zero db may not take effect)", flush=True)
 
     uvicorn_log = open(os.path.join(LOGDIR, "uvicorn.log"), "w", encoding="utf-8")
     celery_log = open(os.path.join(LOGDIR, "celery.log"), "w", encoding="utf-8")
@@ -140,7 +157,7 @@ def main():
     try:
         # ---- 1. uvicorn ----
         uvicorn_p = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8001"],
+            [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", str(E2E_PORT)],
             cwd=ROOT, stdout=uvicorn_log, stderr=subprocess.STDOUT, env=env)
         if not wait_api():
             print(tail_log(os.path.join(LOGDIR, "uvicorn.log")), flush=True)

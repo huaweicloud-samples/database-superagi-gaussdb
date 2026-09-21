@@ -1,8 +1,16 @@
-"""T2: 迁移终态验证。用法: venv-gauss python t2_migrations.py"""
+"""T2: 迁移终态验证。用法: venv-gauss python t2_migrations.py [TARGET_URL]"""
+import sys
+from urllib.parse import unquote, urlparse
+
 import psycopg2
 
-conn = psycopg2.connect(host="127.0.0.1", port=5432, user="superagi_test",
-                        password="GaussTest2026", dbname="super_agi_test", connect_timeout=10)
+TARGET_URL = sys.argv[1] if len(sys.argv) > 1 else \
+    "opengauss+psycopg2://superagi_test:GaussTest2026@127.0.0.1:5432/super_agi_test"
+
+_p = urlparse(TARGET_URL)
+conn = psycopg2.connect(host=_p.hostname, port=_p.port or 5432, user=_p.username,
+                        password=unquote(_p.password), dbname=_p.path.lstrip("/"),
+                        connect_timeout=10)
 cur = conn.cursor()
 cur.execute("SELECT version_num FROM alembic_version")
 head = cur.fetchone()[0]

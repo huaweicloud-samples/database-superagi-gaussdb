@@ -1,9 +1,11 @@
-"""T4: GaussDB 向量后端全链路（mock 1536 维 → GsDiskANN+PQ）。
+"""T4: GaussDB 向量后端全链路（mock 维度 → dim<=1024 走 GsIVFFLAT，>1024 走 GsDiskANN+PQ）。
 含 Task 3 质量审查的三项真库验证闭环：
   V1 JSONB dict 化（psycopg2 typecaster）
   V2 upsert 路径（ON DUPLICATE KEY UPDATE）
   V3 科学计数法向量字面量
-用法: venv-gauss python t4_vector.py"""
+用法: venv-gauss python t4_vector.py [TARGET_URL] [DIM]
+  DIM 默认 1536（集中式 GsDiskANN+PQ 路线）；分布式 floatvector 硬限 1024 维，
+  传 1024 时走 GsIVFFLAT 路线。"""
 import os
 import random
 import sys
@@ -15,16 +17,24 @@ from sqlalchemy import text
 from superagi.vector_store.gaussdb import GaussDB
 
 
-class MockEmbedding1536:
+TARGET_URL = sys.argv[1] if len(sys.argv) > 1 else \
+    "opengauss+psycopg2://superagi_test:GaussTest2026@127.0.0.1:5432/super_agi_test"
+DIM = int(sys.argv[2]) if len(sys.argv) > 2 else 1536
+INDEX_KIND = "GsIVFFLAT" if DIM <= 1024 else "GsDiskANN+PQ"
+
+
+class MockEmbedding:
+    def __init__(self, dim):
+        self.dim = dim
+
     def get_embedding(self, text):
         rng = random.Random(text)
-        return [rng.uniform(-1, 1) for _ in range(1536)]
+        return [rng.uniform(-1, 1) for _ in range(self.dim)]
 
 
 TABLE = "t4_gaussdb_vectors"
-URL = "opengauss+psycopg2://superagi_test:GaussTest2026@127.0.0.1:5432/super_agi_test"
 
-store = GaussDB(TABLE, MockEmbedding1536(), db_url=URL)
+store = GaussDB(TABLE, MockEmbedding(DIM), db_url=TARGET_URL)
 
 # 先清残留
 with store.engine.begin() as conn:
@@ -33,10 +43,10 @@ with store.engine.begin() as conn:
 ids = store.add_texts(["alpha doc", "beta doc", "gamma doc"],
                       metadatas=[{"agent_id": 1}, {"agent_id": 1}, {"agent_id": 2}])
 assert len(ids) == 3 and all(len(i) == 36 for i in ids)
-print(f"[PASS] add_texts -> 3 ids (dim=1536, GsDiskANN+PQ lazy schema)")
+print(f"[PASS] add_texts -> 3 ids (dim={DIM}, {INDEX_KIND} lazy schema)")
 
 stats = store.get_index_stats()
-assert stats["dimensions"] == 1536 and stats["vector_count"] == 3, stats
+assert stats["dimensions"] == DIM and stats["vector_count"] == 3, stats
 print(f"[PASS] get_index_stats -> {stats}")
 
 # V1: JSONB dict 化（psycopg2 自动 typecaster）
@@ -55,7 +65,7 @@ assert store.get_index_stats()["vector_count"] == 3, "upsert should not add a ro
 print("[PASS] V2: upsert via ON DUPLICATE KEY UPDATE (update-in-place, no dup row)")
 
 # V3: 科学计数法字面量（极小值向量）
-tiny_ids = store.add_texts(["tiny doc"], embeddings=[[1e-320] * 1536])
+tiny_ids = store.add_texts(["tiny doc"], embeddings=[[1e-320] * DIM])
 assert len(tiny_ids) == 1
 print("[PASS] V3: scientific-notation vector literal accepted")
 store.delete_embeddings_from_vector_db(tiny_ids)
