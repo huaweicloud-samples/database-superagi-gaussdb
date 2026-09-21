@@ -24,6 +24,7 @@ tests/unit_tests/resource_manager/test_path
 
 # --- GaussDB adaptation (Task 0) ---
 .venv-gauss/
+.venv-e2e/
 venv/
 config.yaml
 workspace/

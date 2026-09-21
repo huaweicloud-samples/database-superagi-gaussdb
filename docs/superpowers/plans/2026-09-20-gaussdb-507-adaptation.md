@@ -48,7 +48,7 @@
 **Files:**
 - Create: `.gitignore`
 
-- [ ] **Step 1: git init 与基线提交**
+- [x] **Step 1: git init 与基线提交**
 
 ```powershell
 Set-Location "D:\workplace\code\SuperAGI\SuperAGI-0.0.14"
@@ -57,7 +57,7 @@ git add -A
 git commit -m "chore: SuperAGI 0.0.14 baseline (pre-GaussDB adaptation)"
 ```
 
-- [ ] **Step 2: 写 .gitignore（在基线提交之后追加，避免仓库里出现环境与本地配置）**
+- [x] **Step 2: 写 .gitignore（在基线提交之后追加，避免仓库里出现环境与本地配置）**
 
 在项目根创建 `.gitignore`，内容：
 
@@ -72,7 +72,7 @@ __pycache__/
 .pytest_cache/
 ```
 
-- [ ] **Step 3: 安装 pytest 到 venv-gauss**
+- [x] **Step 3: 安装 pytest 到 venv-gauss**
 
 ```powershell
 uv pip install -p "D:\workplace\code\SuperAGI\SuperAGI-0.0.14\.venv-gauss\Scripts\python.exe" --index-url https://pypi.tuna.tsinghua.edu.cn/simple "pytest==7.3.2"
@@ -80,7 +80,7 @@ uv pip install -p "D:\workplace\code\SuperAGI\SuperAGI-0.0.14\.venv-gauss\Script
 
 Expected: `+ pytest==7.3.2`（requirements.txt:99 本就钉 7.3.2）
 
-- [ ] **Step 4: 验证 pytest 可运行（跑一个空收集）**
+- [x] **Step 4: 验证 pytest 可运行（跑一个空收集）**
 
 ```powershell
 & .\.venv-gauss\Scripts\python.exe -m pytest tests/unit_tests --collect-only -q 2>&1 | Select-Object -First 5
@@ -88,7 +88,7 @@ Expected: `+ pytest==7.3.2`（requirements.txt:99 本就钉 7.3.2）
 
 Expected: 输出收集信息（原有单测可能因缺依赖报 collection error，属预期——只确认 pytest 本身工作，本项目新增测试放 `tests/unit_tests/test_gaussdb_*.py`，不受既有测试缺依赖影响；若整个目录 collection error 阻塞，后续步骤改用 `pytest tests/unit_tests/test_gaussdb_*.py` 指定文件运行）
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add .gitignore
@@ -103,7 +103,7 @@ git commit -m "chore: add gitignore for gaussdb adaptation"
 - Create: `superagi/helper/db_connection_helper.py`
 - Test: `tests/unit_tests/test_gaussdb_db_connection_helper.py`
 
-- [ ] **Step 1: 写失败的单测**
+- [x] **Step 1: 写失败的单测**
 
 创建 `tests/unit_tests/test_gaussdb_db_connection_helper.py`：
 
@@ -161,7 +161,7 @@ def test_escape_for_alembic_option():
     assert h.escape_for_alembic_option(url) == url.replace("%", "%%")
 ```
 
-- [ ] **Step 2: 运行测试确认失败**
+- [x] **Step 2: 运行测试确认失败**
 
 ```powershell
 & .\.venv-gauss\Scripts\python.exe -m pytest tests/unit_tests/test_gaussdb_db_connection_helper.py -v
@@ -169,7 +169,7 @@ def test_escape_for_alembic_option():
 
 Expected: FAIL，`ModuleNotFoundError: No module named 'superagi.helper.db_connection_helper'`
 
-- [ ] **Step 3: 实现 helper**
+- [x] **Step 3: 实现 helper**
 
 创建 `superagi/helper/db_connection_helper.py`：
 
@@ -240,7 +240,7 @@ def register_gaussdb_compat(engine) -> None:
             return statement, new_params
 ```
 
-- [ ] **Step 4: 运行测试确认通过**
+- [x] **Step 4: 运行测试确认通过**
 
 ```powershell
 & .\.venv-gauss\Scripts\python.exe -m pytest tests/unit_tests/test_gaussdb_db_connection_helper.py -v
@@ -248,7 +248,7 @@ def register_gaussdb_compat(engine) -> None:
 
 Expected: 7 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add superagi/helper/db_connection_helper.py tests/unit_tests/test_gaussdb_db_connection_helper.py
@@ -264,7 +264,7 @@ git commit -m "feat: shared GaussDB connection helper with url building and empt
 - Modify: `main.py:61-89`
 - Modify: `migrations/env.py:1-35,74-97`
 
-- [ ] **Step 1: 改造 db.py**
+- [x] **Step 1: 改造 db.py**
 
 `superagi/models/db.py` 全文替换为：
 
@@ -311,7 +311,7 @@ def connect_db():
 
 说明：原 `get_config`/`urlparse` import 不再被使用，按 surgical 原则一并移除（本次改动使其成为孤儿）。
 
-- [ ] **Step 2: 改造 main.py 连接段**
+- [x] **Step 2: 改造 main.py 连接段**
 
 `main.py:61-89` 段（从 `from urllib.parse import urlparse` 到 `app.add_middleware(DBSessionMiddleware, db_url=db_url)`）替换为：
 
@@ -336,7 +336,7 @@ app.add_middleware(DBSessionMiddleware, db_url=db_url)
 
 说明：原 `db_host/db_username/db_password/db_name/urlparse` 变量与 import 全部由 helper 接管；先确认 `main.py` 其他位置（如 `main.py:104-106` 附近）没有引用这些变量再删除——若有引用，保留对应变量行并改为 `db_url = build_database_url()` 之后不动其他。
 
-- [ ] **Step 3: 改造 migrations/env.py**
+- [x] **Step 3: 改造 migrations/env.py**
 
 `migrations/env.py` 顶部 import 区（:21-24 保留，其余连接相关行）改为：
 
@@ -386,7 +386,7 @@ def run_migrations_online() -> None:
             context.run_migrations()
 ```
 
-- [ ] **Step 4: Alembic 全量回归（downgrade + upgrade）**
+- [x] **Step 4: Alembic 全量回归（downgrade + upgrade）**
 
 ```powershell
 Set-Location "D:\workplace\code\SuperAGI\SuperAGI-0.0.14"
@@ -399,7 +399,7 @@ $env:ENCRYPTION_KEY = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
 Expected: downgrade 逐迁移回退到 base 无错误（`e39295ec089c` 的 downgrade 已对称注释 JSONB 索引行）；upgrade 34 步到 head `9270eb5a8475`。
 若 downgrade 在某步报错：记录报错迁移号，改用清库脚本重置（`& .\.venv-gauss\Scripts\python.exe delivery\tests\reset_test_db.py`，脚本在 Task 6 Step 2 创建；Task 6 未完成前可先用 `docker exec gaussdb su - gausscore -c "...gsql -d super_agi_test -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'"` 后重跑 upgrade head——注意 gausscore 会成为新 public owner，需再执行 `ALTER SCHEMA public OWNER TO superagi_test; GRANT CREATE, USAGE ON SCHEMA public TO superagi_test;`），并把 downgrade 失败点写进 delivery 注意事项文档。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add superagi/models/db.py main.py migrations/env.py
@@ -414,7 +414,7 @@ git commit -m "feat: unify db connection building via gaussdb helper (opengauss 
 - Create: `superagi/vector_store/gaussdb.py`
 - Test: `tests/unit_tests/test_gaussdb_vector_store.py`
 
-- [ ] **Step 1: 写失败的单测（纯函数部分，不连库）**
+- [x] **Step 1: 写失败的单测（纯函数部分，不连库）**
 
 创建 `tests/unit_tests/test_gaussdb_vector_store.py`：
 
@@ -478,7 +478,7 @@ def test_table_name_validation():
         GaussDB("", FakeEmbedding())
 ```
 
-- [ ] **Step 2: 运行测试确认失败**
+- [x] **Step 2: 运行测试确认失败**
 
 ```powershell
 & .\.venv-gauss\Scripts\python.exe -m pytest tests/unit_tests/test_gaussdb_vector_store.py -v
@@ -486,7 +486,7 @@ def test_table_name_validation():
 
 Expected: FAIL，`ModuleNotFoundError: No module named 'superagi.vector_store.gaussdb'`
 
-- [ ] **Step 3: 实现 gaussdb.py**
+- [x] **Step 3: 实现 gaussdb.py**
 
 创建 `superagi/vector_store/gaussdb.py`：
 
@@ -699,7 +699,7 @@ class GaussDB(VectorStore):
 - `ON DUPLICATE KEY UPDATE` 是 A 模式下的 upsert 写法（`ON CONFLICT` 不支持，见背景速查第 3 条）
 - metadata 里存 text（对齐 pinecone.py:73 `metadata[self.text_field] = text`），upsert 时 text 取 `meta.get("text", "")`
 
-- [ ] **Step 4: 运行测试确认通过**
+- [x] **Step 4: 运行测试确认通过**
 
 ```powershell
 & .\.venv-gauss\Scripts\python.exe -m pytest tests/unit_tests/test_gaussdb_vector_store.py -v
@@ -707,7 +707,7 @@ class GaussDB(VectorStore):
 
 Expected: 8 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add superagi/vector_store/gaussdb.py tests/unit_tests/test_gaussdb_vector_store.py
@@ -724,7 +724,7 @@ git commit -m "feat: GaussDB native vector store backend (floatvector + GsIVFFLA
 - Create: `superagi/vector_store/llama_gaussdb.py`
 - Modify: `superagi/resource_manager/llama_vector_store_factory.py:51-59`
 
-- [ ] **Step 1: 枚举加 GAUSSDB**
+- [x] **Step 1: 枚举加 GAUSSDB**
 
 `superagi/types/vector_store_types.py:10` 的 `LANCEDB = 'LanceDB'` 行后加：
 
@@ -732,7 +732,7 @@ git commit -m "feat: GaussDB native vector store backend (floatvector + GsIVFFLA
     GAUSSDB = 'gaussdb'
 ```
 
-- [ ] **Step 2: vector_factory 挂载**
+- [x] **Step 2: vector_factory 挂载**
 
 `superagi/vector_store/vector_factory.py` 顶部 import 区加：
 
@@ -756,7 +756,7 @@ from superagi.vector_store.gaussdb import GaussDB
 
 说明：`get_vector_storage` 不在工厂里探维度建表（Redis 分支需要 `create_index()`，GaussDB 后端是惰性 ensure，首次写入时才建）。
 
-- [ ] **Step 3: llama_index 0.6.35 适配类**
+- [x] **Step 3: llama_index 0.6.35 适配类**
 
 先确认 llama_index 0.6.35 实际 API（venv-gauss 未装 llama_index，用全局 python 检查其已装版本，若未装则跳过本步检查、代码按 0.6.35 文档签名写并在 Task 6 t5 脚本中验证）：
 
@@ -822,7 +822,7 @@ class LlamaGaussDBVectorStore:
         )
 ```
 
-- [ ] **Step 4: llama_vector_store_factory 挂载**
+- [x] **Step 4: llama_vector_store_factory 挂载**
 
 `superagi/resource_manager/llama_vector_store_factory.py` 的 `if self.vector_store_name == VectorStoreType.QDRANT:` 分支之前加：
 
@@ -832,7 +832,7 @@ class LlamaGaussDBVectorStore:
             return LlamaGaussDBVectorStore(self.index_name)
 ```
 
-- [ ] **Step 5: 语法与 import 校验（不连库）**
+- [x] **Step 5: 语法与 import 校验（不连库）**
 
 ```powershell
 & .\.venv-gauss\Scripts\python.exe -c "from superagi.types.vector_store_types import VectorStoreType; print(VectorStoreType.GAUSSDB); from superagi.vector_store.llama_gaussdb import LlamaGaussDBVectorStore; print('llama adapter import ok')"
@@ -840,7 +840,7 @@ class LlamaGaussDBVectorStore:
 
 Expected: `VectorStoreType.GAUSSDB` 与 `llama adapter import ok`（llama_gaussdb 的 llama_index import 在方法内部惰性执行，构造实例不触发）
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add superagi/types/vector_store_types.py superagi/vector_store/vector_factory.py superagi/vector_store/llama_gaussdb.py superagi/resource_manager/llama_vector_store_factory.py
@@ -856,7 +856,7 @@ git commit -m "feat: register GAUSSDB vector store type in both factories with l
 - Modify: `config_template.yaml:22-29,104-112`
 - Create: `.env.gaussdb.example`
 
-- [ ] **Step 1: requirements.txt 加方言包**
+- [x] **Step 1: requirements.txt 加方言包**
 
 在 `requirements.txt` 的 `psycopg2==2.9.6`（:92）行后插入一行：
 
@@ -864,7 +864,7 @@ git commit -m "feat: register GAUSSDB vector store type in both factories with l
 opengauss-sqlalchemy==2.4.0
 ```
 
-- [ ] **Step 2: config_template.yaml 更新**
+- [x] **Step 2: config_template.yaml 更新**
 
 `DATABASE INFO` 段（:22-29）替换为：
 
@@ -894,7 +894,7 @@ REDIS_URL: "super__redis:6379"
 #GAUSSDB_VECTOR_DB_URL: opengauss+psycopg2://superagi:password@gaussdb-host:5432/super_agi_vectors
 ```
 
-- [ ] **Step 3: 创建 .env.gaussdb.example**
+- [x] **Step 3: 创建 .env.gaussdb.example**
 
 ```bash
 # GaussDB 507 deployment example (copy to config.yaml or export as env vars)
@@ -921,7 +921,7 @@ REDIS_URL=127.0.0.1:6379
 # 注意：非 sysadmin 不能在 public schema 建函数（本适配零 DB 函数依赖，无需处理）
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add requirements.txt config_template.yaml .env.gaussdb.example
@@ -939,7 +939,7 @@ git commit -m "chore: gaussdb config templates and opengauss-sqlalchemy dependen
 - Create: `delivery/tests/t4_vector.py`
 - Create: `delivery/tests/reset_test_db.py`
 
-- [ ] **Step 1: t1 连通测试**
+- [x] **Step 1: t1 连通测试**
 
 创建 `delivery/tests/t1_connect.py`：
 
@@ -970,7 +970,7 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 2: reset 工具 + t2 迁移状态测试**
+- [x] **Step 2: reset 工具 + t2 迁移状态测试**
 
 创建 `delivery/tests/reset_test_db.py`（管理员清理后重放迁移的辅助脚本，仅测试库使用）：
 
@@ -1025,7 +1025,7 @@ assert col == "jsonb", f"events.event_property={col}"
 print(f"[PASS] head={head}, tables={count}, events.event_property={col}")
 ```
 
-- [ ] **Step 3: t3 CRUD + 空串拦截测试**
+- [x] **Step 3: t3 CRUD + 空串拦截测试**
 
 创建 `delivery/tests/t3_crud_empty_string.py`：
 
@@ -1089,7 +1089,7 @@ print("T3 done")
 
 说明：`Configuration.value` 列若为 nullable String，空串拦截后写入 `' '`；若该列 NOT NULL，拦截前写入会直接违反约束——两种情况本测试都验证拦截生效。若 `Configuration` 模型字段名与实际不符（执行时以 `superagi/models/configuration.py` 为准），同构调整。
 
-- [ ] **Step 4: t4 向量后端测试（mock embedding，无需 API key）**
+- [x] **Step 4: t4 向量后端测试（mock embedding，无需 API key）**
 
 创建 `delivery/tests/t4_vector.py`：
 
@@ -1146,7 +1146,7 @@ with store.engine.begin() as conn:
 print("T4 done")
 ```
 
-- [ ] **Step 5: 依次运行 t1-t4**
+- [x] **Step 5: 依次运行 t1-t4**
 
 ```powershell
 Set-Location "D:\workplace\code\SuperAGI\SuperAGI-0.0.14\delivery\tests"
@@ -1159,7 +1159,7 @@ $py = "D:\workplace\code\SuperAGI\SuperAGI-0.0.14\.venv-gauss\Scripts\python.exe
 
 Expected: 每个脚本全部 `[PASS]` 行且正常退出。t3 若因模型字段名不符报错，读对应模型文件修正测试（不得为过测试改模型）。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 Set-Location "D:\workplace\code\SuperAGI\SuperAGI-0.0.14"
@@ -1176,7 +1176,7 @@ git commit -m "test: delivery tier tests (connect/migrations/crud+empty-string/v
 - Create: `delivery/测试指南.md`
 - Create: `delivery/注意事项.md`
 
-- [ ] **Step 1: 实施部署交付文档**
+- [x] **Step 1: 实施部署交付文档**
 
 创建 `delivery/实施部署交付文档.md`，章节结构（内容要点如下，正文按要点展开写全）：
 
@@ -1209,7 +1209,7 @@ git commit -m "test: delivery tier tests (connect/migrations/crud+empty-string/v
 - git revert 到 baseline 提交；config.yaml 换回 postgresql:// URL 即回到原 PG 形态
 ```
 
-- [ ] **Step 2: 测试指南**
+- [x] **Step 2: 测试指南**
 
 创建 `delivery/测试指南.md`：
 
@@ -1242,7 +1242,7 @@ reset_test_db.py 重置测试库并重放 34 个迁移（downgrade base + upgrad
 | 端到端 | | | |
 ```
 
-- [ ] **Step 3: 注意事项**
+- [x] **Step 3: 注意事项**
 
 创建 `delivery/注意事项.md`：
 
@@ -1275,7 +1275,7 @@ reset_test_db.py 重置测试库并重放 34 个迁移（downgrade base + upgrad
 - gen_random_uuid()/uuid-ossp/pgcrypto 不可用；DB 端 uuid() 可用（本适配用应用层 uuid4）
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add delivery/
@@ -1286,7 +1286,7 @@ git commit -m "docs: delivery documents (deployment/testing/caveats) for gaussdb
 
 ### Task 8: 最终回归与收尾
 
-- [ ] **Step 1: 全量回归**
+- [x] **Step 1: 全量回归**
 
 ```powershell
 Set-Location "D:\workplace\code\SuperAGI\SuperAGI-0.0.14"
@@ -1301,7 +1301,7 @@ Set-Location delivery\tests
 
 Expected: 单测 15 passed；reset 后迁移回放成功；t1-t4 全 [PASS]
 
-- [ ] **Step 2: llama 适配冒烟（可选，若 venv 有 llama_index）**
+- [x] **Step 2: llama 适配冒烟（可选，若 venv 有 llama_index）**
 
 ```powershell
 python -c "import llama_index; print(llama_index.__version__)"
@@ -1309,7 +1309,7 @@ python -c "import llama_index; print(llama_index.__version__)"
 
 若全局 python 有 llama_index 0.6.35：写 `delivery/tests/t5_llama_smoke.py`（LlamaGaussDBVectorStore add 2 条 mock node + query 返回 VectorStoreQueryResult）并运行；无则跳过并在测试指南结果表标记"未执行（缺 llama_index 环境）"。
 
-- [ ] **Step 3: 更新 tasks/todo.md 与调研报告验证记录，git 收尾**
+- [x] **Step 3: 更新 tasks/todo.md 与调研报告验证记录，git 收尾**
 
 ```powershell
 Set-Location "D:\workplace\code\SuperAGI\SuperAGI-0.0.14"
@@ -1325,7 +1325,7 @@ git log --oneline
 - Modify: `superagi/vector_store/embedding/openai.py`（仅当 embedding 模型名硬编码时，加配置覆盖）
 - Create: `delivery/e2e-config/README.md`（config.yaml 模板与启动说明）
 
-- [ ] **Step 1: 现场探测**
+- [x] **Step 1: 现场探测**
 
 ```powershell
 ollama list
@@ -1335,7 +1335,7 @@ docker ps --format "{{.Names}}" | Select-String redis
 
 确认 Ollama 在跑且有 `qwen3:4b` / `qwen3-embedding:0.6b`（1024 维）；Redis 无则起：`docker run -d --name superagi-e2e-redis -p 6379:6379 redis:7`。
 
-- [ ] **Step 2: 建端到端独立库 super_agi_e2e（不影响 super_agi_test）**
+- [x] **Step 2: 建端到端独立库 super_agi_e2e（不影响 super_agi_test）**
 
 ```powershell
 python -c "import psycopg2; c=psycopg2.connect(host='127.0.0.1',port=5432,user='appuser',password='App@User456',dbname='postgres'); c.autocommit=True; cur=c.cursor(); cur.execute(\"SELECT 1 FROM pg_database WHERE datname='super_agi_e2e'\"); cur.fetchone() or cur.execute(\"CREATE DATABASE super_agi_e2e DBCOMPATIBILITY='A' ENCODING='UTF8'\"); cur.execute('ALTER DATABASE super_agi_e2e OWNER TO superagi_test'); print('db ready')"; docker exec gaussdb su - gausscore -c "export LD_LIBRARY_PATH=/opt/gaussdb/app/lib; /opt/gaussdb/app/bin/gsql -d super_agi_e2e -c 'GRANT CREATE, USAGE ON SCHEMA public TO superagi_test;'"
@@ -1343,7 +1343,7 @@ python -c "import psycopg2; c=psycopg2.connect(host='127.0.0.1',port=5432,user='
 
 Expected: `db ready` + `GRANT`。注意 e2e 库复用 `superagi_test` 用户（密码无特殊字符）。
 
-- [ ] **Step 3: 全量依赖 venv（.venv-e2e，Python 3.8）**
+- [x] **Step 3: 全量依赖 venv（.venv-e2e，Python 3.8）**
 
 ```powershell
 py -3.8 -m venv "D:\workplace\code\SuperAGI\SuperAGI-0.0.14\.venv-e2e"
@@ -1352,7 +1352,7 @@ uv pip install -p "D:\workplace\code\SuperAGI\SuperAGI-0.0.14\.venv-e2e\Scripts\
 
 若整体解析失败（requirements 内版本互斥/Python 3.8 无 wheel），改为剔除编译巨坑后的清单逐批安装：先装核心（requirements 里除 `llama_cpp_python`、`langchain` 生态外的全部），再装 `llama-index==0.6.35` 及其依赖，最后 langchain 生态；`llama_cpp_python==0.2.7`（C++ 编译，local-llm 可选功能，GAUSSDB 端到端不需要）**跳过**；逐包记录失败项，凡 import 链不需要的可跳过（启动 uvicorn 后按 ImportError 补装）。这是本任务最大风险点，预算单独一轮迭代。
 
-- [ ] **Step 4: config.yaml（e2e）与 embedding 模型名核对**
+- [x] **Step 4: config.yaml（e2e）与 embedding 模型名核对**
 
 读 `superagi/vector_store/embedding/openai.py`：若模型名硬编码 `text-embedding-ada-002`，加配置覆盖 `get_config("OPENAI_EMBEDDING_MODEL", "text-embedding-ada-002")`（一行改动 + 单测可选）；`OpenAiEmbedding` 的 api_base 确认走 `OPENAI_API_BASE` 配置（config_template.yaml:12 已有此项）。
 
@@ -1380,7 +1380,7 @@ MAX_MODEL_TOKEN_LIMIT: 8192
 
 在测试库跑一次迁移：`$env:DB_URL='opengauss+psycopg2://superagi_test:GaussTest2026@127.0.0.1:5432/super_agi_e2e'; $env:ENCRYPTION_KEY='AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; & .\.venv-gauss\Scripts\alembic.exe upgrade head`（head=9270eb5a8475）。
 
-- [ ] **Step 5: 启动实例（t6_e2e_boot.py 前半）**
+- [x] **Step 5: 启动实例（t6_e2e_boot.py 前半）**
 
 创建 `delivery/tests/t6_e2e_boot.py`：
 
@@ -1427,7 +1427,7 @@ if __name__ == "__main__":
 
 运行：`& .\.venv-e2e\Scripts\python.exe delivery\tests\t6_e2e_boot.py`。启动失败按 traceback 逐个补装缺失包/修配置，直到 `[PASS]`。
 
-- [ ] **Step 6: API 端到端流程（agent 创建 + 执行 + 落库验证）**
+- [x] **Step 6: API 端到端流程（agent 创建 + 执行 + 落库验证）**
 
 读 `superagi/controllers/` 下 auth 与 agent 执行相关路由，按实际 API 形状在 `t6_e2e_boot.py` 的 `main()` 中追加完整流程（执行者现场对齐路由签名）：
 1. 登录/注册拿 JWT（`ENV=DEV` 下的 auth API，读 `superagi/controllers/auth.py`）
@@ -1439,16 +1439,16 @@ if __name__ == "__main__":
 
 全部通过后：`[PASS] E2E: boot + agent run + feeds/events + vector search on GaussDB (Ollama local models)`。
 
-- [ ] **Step 7: delivery/e2e-config/README.md 记录启动方法与 config 模板（含踩坑修正）**
+- [x] **Step 7: delivery/e2e-config/README.md 记录启动方法与 config 模板（含踩坑修正）**
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```powershell
 git add delivery/ superagi/vector_store/embedding/openai.py config_template.yaml
 git commit -m "test: e2e acceptance with ollama local models on gaussdb"
 ```
 
-- [ ] **Step 9: 分层测试 t1-t4 复跑确认无回归，更新 tasks/todo.md 验收记录**
+- [x] **Step 9: 分层测试 t1-t4 复跑确认无回归，更新 tasks/todo.md 验收记录**
 
 ---
 
