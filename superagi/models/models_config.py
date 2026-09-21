@@ -5,7 +5,7 @@ from superagi.models.organisation import Organisation
 from superagi.models.project import Project
 from superagi.models.models import Models
 from superagi.llms.openai import OpenAi
-from superagi.helper.encyption_helper import encrypt_data, decrypt_data
+from superagi.helper.encyption_helper import encrypt_data, decrypt_data, InvalidToken
 from fastapi import HTTPException
 import logging
 
@@ -117,9 +117,17 @@ class ModelsConfig(DBBaseModel):
             logging.error("No API key found for the provided model provider")
             return []
 
-        api_keys = [{"provider": provider, "api_key": decrypt_data(api_key)} for provider, api_key in
-                    api_key_info]
-
+        api_keys = []
+        for provider, api_key in api_key_info:
+            # Local LLM 行的 api_key 为明文占位（add_llm_config 写入），不做 Fernet 解密
+            # （与 fetch_api_key 的 'Local LLM' 特判对齐；兜底 InvalidToken 防其他明文行）
+            if provider == 'Local LLM':
+                api_keys.append({"provider": provider, "api_key": api_key})
+                continue
+            try:
+                api_keys.append({"provider": provider, "api_key": decrypt_data(api_key)})
+            except InvalidToken:
+                api_keys.append({"provider": provider, "api_key": api_key})
         return api_keys
 
     @classmethod
