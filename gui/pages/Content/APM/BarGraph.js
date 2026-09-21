@@ -1,5 +1,9 @@
 import React, {useEffect, useRef} from "react";
-import * as echarts from 'echarts';
+// echarts 初始化时访问 window，SSR（next dev 服务端渲染）下会炸：仅浏览器环境加载
+let echarts;
+if (typeof window !== "undefined") {
+  echarts = require("echarts");
+}
 
 export const BarGraph = ({data, type, color}) => {
   const chartRef = useRef(null);
