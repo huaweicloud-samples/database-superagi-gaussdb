@@ -193,8 +193,8 @@ class GaussDB(VectorStore):
             payloads = embeddings["payloads"]
         else:
             ids = [v[0] for v in vectors]
-            vectors = [v[1] for v in vectors]
             payloads = [v[2] for v in vectors]
+            vectors = [v[1] for v in vectors]
         self._ensure_schema(len(vectors[0]))
         with self.engine.begin() as conn:
             for tid, emb, meta in zip(ids, vectors, payloads):
