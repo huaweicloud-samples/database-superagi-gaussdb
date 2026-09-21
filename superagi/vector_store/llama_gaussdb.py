@@ -21,15 +21,15 @@ class LlamaGaussDBVectorStore:
         return self._store.engine
 
     def add(self, embedding_results) -> None:
-        """embedding_results: llama_index NodeEmbedding 列表（TypedDict：
-        {id, embedding, node, extra_info}），node 取 get_content()。"""
+        """embedding_results: llama_index NodeWithEmbedding 列表（dataclass：
+        字段 node/embedding，id 为 property（node.node_id）），node 取 get_content()。"""
         texts, metas, embs, ids = [], [], [], []
         for r in embedding_results:
-            node = r["node"]
+            node = r.node
             texts.append(node.get_content())
             metas.append(dict(node.metadata or {}))
-            embs.append(r["embedding"])
-            ids.append(r["id"])
+            embs.append(r.embedding)
+            ids.append(r.id)
         self._store.add_texts(texts, metadatas=metas, embeddings=embs, ids=ids)
 
     def delete(self, ref_doc_id: str, **delete_kwargs) -> None:
