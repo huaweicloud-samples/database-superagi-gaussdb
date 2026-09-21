@@ -1,30 +1,33 @@
 import openai
 
+from superagi.config.config import get_config
+
 
 class OpenAiEmbedding:
-    def __init__(self, api_key, model="text-embedding-ada-002"):
-        self.model = model
+    def __init__(self, api_key, model=None):
+        self.model = model or get_config("OPENAI_EMBEDDING_MODEL", "text-embedding-ada-002")
         self.api_key = api_key
-        
+
     async def get_embedding_async(self, text: str):
         try:
-            openai.api_key = self.api_key
             response = await openai.Embedding.create(
-                                input=[text],
-                engine=self.model
+                api_key=self.api_key,
+                api_base=get_config("OPENAI_API_BASE", "https://api.openai.com/v1"),
+                input=[text],
+                model=self.model
             )
             return response['data'][0]['embedding']
         except Exception as exception:
-            return {"error": exception}    
+            return {"error": exception}
 
-               
+
     def get_embedding(self, text):
         try:
-            # openai.api_key = get_config("OPENAI_API_KEY")
             response = openai.Embedding.create(
                 api_key=self.api_key,
+                api_base=get_config("OPENAI_API_BASE", "https://api.openai.com/v1"),
                 input=[text],
-                engine=self.model
+                model=self.model
             )
             return response['data'][0]['embedding']
         except Exception as exception:
