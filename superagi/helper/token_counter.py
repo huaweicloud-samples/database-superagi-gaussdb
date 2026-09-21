@@ -55,7 +55,8 @@ class TokenCounter:
                                             "gpt-3.5-turbo-16k": 4, "gpt-4-32k": 3, "gpt-4-32k-0314": 3,
                                             "models/chat-bison-001": 4}
             encoding = tiktoken.encoding_for_model(model)
-        except KeyError:
+        except (KeyError, ValueError):
+            # tiktoken 对未知模型（本地 LLM 名等）抛 ValueError 而非 KeyError
             logger.warning("Warning: model not found. Using cl100k_base encoding.")
             encoding = tiktoken.get_encoding("cl100k_base")
 

@@ -19,6 +19,9 @@ from superagi.types.model_source_types import ModelSourceType
 from sqlalchemy import event
 from superagi.models.agent_execution import AgentExecution
 from superagi.helper.webhook_manager import WebHookManager
+from superagi.helper.local_model_compat import patch_llama_index_model_whitelist
+
+patch_llama_index_model_whitelist()
 
 redis_url = get_config('REDIS_URL', 'super__redis:6379')
 

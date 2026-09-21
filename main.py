@@ -59,6 +59,9 @@ from superagi.models.workflows.agent_workflow import AgentWorkflow
 from superagi.models.workflows.iteration_workflow import IterationWorkflow
 from superagi.models.workflows.iteration_workflow_step import IterationWorkflowStep
 from superagi.helper.db_connection_helper import build_database_url, register_gaussdb_compat
+from superagi.helper.local_model_compat import patch_llama_index_model_whitelist
+
+patch_llama_index_model_whitelist()
 app = FastAPI()
 
 env = get_config('ENV', "DEV")
