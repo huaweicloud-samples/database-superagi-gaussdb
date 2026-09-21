@@ -90,6 +90,7 @@ Pillow==9.5.0
 pinecone-client==2.2.1
 prompt-toolkit==3.0.38
 psycopg2==2.9.6
+opengauss-sqlalchemy==2.4.0
 pycparser==2.21
 pydantic==1.10.8
 PyJWT==1.7.1

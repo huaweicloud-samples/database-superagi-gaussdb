@@ -19,13 +19,15 @@ RESOURCES_SUMMARY_MODEL_NAME: "gpt-3.5-turbo"
 MAX_TOOL_TOKEN_LIMIT: 800
 MAX_MODEL_TOKEN_LIMIT: 4032 # set to 2048 for llama
 
-#DATABASE INFO
-# redis details
+#DATABASE INFO (GaussDB 507 compatible)
+# 方式一：分项配置（方言默认 opengauss+psycopg2，密码无需手动编码）
 DB_NAME: super_agi_main
-DB_HOST: super__postgres
+DB_HOST: gaussdb-host
+DB_PORT: 5432
 DB_USERNAME: superagi
 DB_PASSWORD: password
-DB_URL: postgresql://superagi:password@super__postgres:5432/super_agi_main
+# 方式二：完整 URL（scheme 需为 opengauss+psycopg2；密码含特殊字符时需 percent-encode）
+#DB_URL: opengauss+psycopg2://superagi:password@gaussdb-host:5432/super_agi_main
 REDIS_URL: "super__redis:6379"
 
 #STORAGE TYPE ("FILE" or "S3")
@@ -102,11 +104,13 @@ STABILITY_API_KEY: YOUR_STABILITY_API_KEY
 ENGINE_ID: "stable-diffusion-xl-beta-v2-2-2"
 
 ## To config a vector store for resources manager uncomment config below
-## based on the vector store you want to use
+## RESOURCE_VECTOR_STORE can be GAUSSDB, REDIS, PINECONE, CHROMA, QDRANT
+#RESOURCE_VECTOR_STORE: GAUSSDB
+#RESOURCE_VECTOR_STORE_INDEX_NAME: super_agi_vectors
 
-## RESOURCE_VECTOR_STORE can be REDIS, PINECONE, CHROMA, QDRANT
-#RESOURCE_VECTOR_STORE: YOUR_RESOURCE_VECTOR_STORE
-#RESOURCE_VECTOR_STORE_INDEX_NAME: YOUR_RESOURCE_VECTOR_STORE_INDEX_NAME
+## To use GaussDB native vector store (floatvector + GsIVFFLAT/GsDiskANN).
+## 默认与元数据同库；如需独立连接，取消注释并填写完整 URL
+#GAUSSDB_VECTOR_DB_URL: opengauss+psycopg2://superagi:password@gaussdb-host:5432/super_agi_vectors
 
 ## To use a custom redis
 #REDIS_VECTOR_STORE_URL: YOUR_REDIS_VECTOR_STORE_URL
