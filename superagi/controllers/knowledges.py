@@ -70,7 +70,7 @@ def get_user_knowledge_list(organisation = Depends(get_user_organisation)):
 def get_knowledge_details(knowledge_name: str):
     knowledge_data = Knowledges.fetch_knowledge_details_marketplace(knowledge_name)
     knowledge_config_data = KnowledgeConfigs.fetch_knowledge_config_details_marketplace(knowledge_data["id"])
-    knowledge_data_with_config = knowledge_data | knowledge_config_data
+    knowledge_data_with_config = {**knowledge_data, **(knowledge_config_data or {})}
     knowledge_data_with_config["install_number"] = MarketPlaceStats.get_knowledge_installation_number(knowledge_data_with_config["id"])
     update_time = str(knowledge_data_with_config["updated_at"])
     update_time = datetime.strptime(update_time, "%Y-%m-%dT%H:%M:%S.%f")
@@ -99,7 +99,8 @@ def get_user_knowledge_details(knowledge_id: int):
         "installation_type": vector_database_index.state
     }
     knowledge_config = KnowledgeConfigs.get_knowledge_config_from_knowledge_id(db.session, knowledge_id)
-    knowledge_data_with_config = knowledge | knowledge_config
+    # py3.8 兼容：`dict | dict` 是 3.9+ 语法，且 config 可能为 None
+    knowledge_data_with_config = {**knowledge, **(knowledge_config or {})}
     return knowledge_data_with_config
 
 @router.post("/add_or_update/data")

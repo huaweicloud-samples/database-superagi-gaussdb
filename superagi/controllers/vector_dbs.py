@@ -41,7 +41,7 @@ def get_vector_db_details(vector_db_id: int):
         "db_type": vector_db.db_type
     }
     vector_db_config = VectordbConfigs.get_vector_db_config_from_db_id(db.session, vector_db_id)
-    vector_db_with_config = vector_db_data | vector_db_config
+    vector_db_with_config = {**vector_db_data, **(vector_db_config or {})}
     indices = db.session.query(VectordbIndices).filter(VectordbIndices.vector_db_id == vector_db_id).all()
     vector_indices = []
     for index in indices:
