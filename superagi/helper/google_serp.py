@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, List
+from typing import Any, Dict, List
 
 import aiohttp
 
@@ -40,7 +40,7 @@ class GoogleSerpApiWrap:
 
     async def fetch_serper_results(self,
                                    query: str, search_type: str = "search"
-                                   ) -> dict[str, Any]:
+                                   ) -> Dict[str, Any]:
         """
         Fetch the search results from the SerpApi.
 

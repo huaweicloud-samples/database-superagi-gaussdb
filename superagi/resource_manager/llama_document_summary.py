@@ -1,5 +1,7 @@
 import os
 
+from typing import List
+
 from llama_index.indices.response import ResponseMode
 from llama_index.schema import Document
 
@@ -12,7 +14,7 @@ class LlamaDocumentSummary:
         self.model_api_key = model_api_key
         self.model_source = model_source
 
-    def generate_summary_of_document(self, documents: list[Document]):
+    def generate_summary_of_document(self, documents: List[Document]):
         """
         Generates summary of the documents
 
@@ -34,7 +36,7 @@ class LlamaDocumentSummary:
 
         return doc_summary_index.get_document_summary(documents[0].doc_id)
 
-    def generate_summary_of_texts(self, texts: list[str]):
+    def generate_summary_of_texts(self, texts: List[str]):
         """
         Generates summary of the texts
 

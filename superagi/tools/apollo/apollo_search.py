@@ -1,5 +1,5 @@
 import json
-from typing import Type
+from typing import List, Type
 
 import requests
 from pydantic import BaseModel, Field
@@ -9,7 +9,7 @@ from superagi.tools.base_tool import BaseTool
 
 
 class ApolloSearchSchema(BaseModel):
-    person_titles: list[str] = Field(
+    person_titles: List[str] = Field(
         ...,
         description="The titles of the people to search for.",
     )
@@ -21,7 +21,7 @@ class ApolloSearchSchema(BaseModel):
         25,
         description="The number of results to retrieve per page. Default value is 25.",
     )
-    num_of_employees: list[int] = Field(
+    num_of_employees: List[int] = Field(
         [],
         description="The number of employees to filter by in format [start_range, end_range]. Default value is empty array.",
     )
@@ -54,7 +54,7 @@ class ApolloSearchTool(BaseTool):
     class Config:
         arbitrary_types_allowed = True
 
-    def _execute(self, person_titles: list[str], page: int = 1, per_page: int = 25, num_of_employees: list[int] = [],
+    def _execute(self, person_titles: List[str], page: int = 1, per_page: int = 25, num_of_employees: List[int] = [],
                  person_location: str = "", organization_domains: str = "") -> str:
         """
         Execute the Apollo search tool.

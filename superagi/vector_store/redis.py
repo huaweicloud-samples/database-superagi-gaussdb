@@ -58,7 +58,7 @@ class Redis(VectorStore):
     def add_texts(self, texts: Iterable[str],
                   metadatas: Optional[List[dict]] = None,
                   embeddings: Optional[List[List[float]]] = None,
-                  ids: Optional[list[str]] = None,
+                  ids: Optional[List[str]] = None,
                   **kwargs: Any) -> List[str]:
         pipe = self.redis_client.pipeline()
         prefix = DOC_PREFIX + str(self.index)

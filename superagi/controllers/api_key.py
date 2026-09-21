@@ -8,7 +8,9 @@ from pydantic import BaseModel
 from superagi.helper.auth import get_user_organisation, validate_api_key
 from superagi.helper.auth import check_auth
 from superagi.models.api_key import ApiKey
-from typing import Optional, Annotated
+from typing import Optional
+
+from typing_extensions import Annotated
 
 router = APIRouter()
 

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated
+from typing_extensions import Annotated
 
 from fastapi_sqlalchemy import db
 from fastapi import HTTPException, Depends, Body

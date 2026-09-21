@@ -40,12 +40,12 @@ class Pinecone(VectorStore):
     def add_texts(
             self,
             texts: Iterable[str],
-            metadatas: Optional[list[dict]] = None,
-            ids: Optional[list[str]] = None,
+            metadatas: Optional[List[dict]] = None,
+            ids: Optional[List[str]] = None,
             namespace: Optional[str] = None,
             batch_size: int = 32,
             **kwargs: Any,
-    ) -> list[str]:
+    ) -> List[str]:
         """
         Add texts to the vector store.
 

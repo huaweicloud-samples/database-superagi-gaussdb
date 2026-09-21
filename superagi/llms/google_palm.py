@@ -1,4 +1,7 @@
-import google.generativeai as palm
+try:
+    import google.generativeai as palm
+except ImportError:  # google-generativeai requires Python>=3.9; defer failure until actually used
+    palm = None
 
 from superagi.config.config import get_config
 from superagi.lib.logger import logger
@@ -17,6 +20,8 @@ class GooglePalm(BaseLlm):
             top_k (int): The top k.
             top_p (float): The top p.
         """
+        if palm is None:
+            raise ImportError("google-generativeai is not installed (requires Python>=3.9)")
         self.model = model
         self.temperature = temperature
         self.candidate_count = candidate_count

@@ -1,5 +1,9 @@
-from llama_cpp import Llama
-from llama_cpp import LlamaGrammar
+try:
+    from llama_cpp import Llama
+    from llama_cpp import LlamaGrammar
+except ImportError:  # llama_cpp_python needs a C++ toolchain; defer failure until actually used
+    Llama = None
+    LlamaGrammar = None
 from superagi.config.config import get_config
 from superagi.lib.logger import logger
 
@@ -15,6 +19,8 @@ class LLMLoader:
         return cls._instance
 
     def __init__(self, context_length):
+        if Llama is None:
+            raise ImportError("llama_cpp_python is not installed (requires a C++ build toolchain)")
         self.context_length = context_length
 
     @property
