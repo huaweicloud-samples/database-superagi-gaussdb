@@ -57,6 +57,11 @@ def test_table_name_validation():
         GaussDB("", FakeEmbedding())
 
 
+def test_hyphenated_index_name_allowed():
+    # 默认 index 名（super-agent-index1 等）含连字符，双引号包裹的标识符合法
+    GaussDB("super-agent-index1", FakeEmbedding(), db_url="sqlite://")
+
+
 def test_vec_literal_special_floats():
     assert _vec_literal([1.0, 0.5]) == "[1.0,0.5]"
     assert _vec_literal([1e-320]).startswith("[")   # 极小值走科学计数法，格式合法即可

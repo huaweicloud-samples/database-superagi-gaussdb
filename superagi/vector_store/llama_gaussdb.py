@@ -38,13 +38,19 @@ class LlamaGaussDBVectorStore:
     def query(self, query, **kwargs):
         """query: llama_index VectorStoreQuery（query_embedding/similarity_top_k）。
 
+        filters（ExactMatchFilter 列表，.key/.value）转 metadata JSONB
+        精确匹配（如 agent_id/resource_id），防止跨 agent 召回。
         返回 VectorStoreQueryResult(nodes, similarities, ids)。
         """
         from llama_index.vector_stores.types import VectorStoreQueryResult
         from llama_index.schema import TextNode
 
+        metadata = None
+        if getattr(query, "filters", None):
+            metadata = {f.key: f.value for f in query.filters.filters}
         rows = self._store.query_by_embedding(query.query_embedding,
-                                              query.similarity_top_k or 5)
+                                              query.similarity_top_k or 5,
+                                              metadata=metadata)
         nodes = [TextNode(id_=r[0], text=r[1], metadata=r[2] or {}) for r in rows]
         return VectorStoreQueryResult(
             nodes=nodes,

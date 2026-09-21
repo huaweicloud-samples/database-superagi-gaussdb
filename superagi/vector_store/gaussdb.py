@@ -23,7 +23,7 @@ from superagi.lib.logger import logger
 from superagi.vector_store.base import VectorStore
 from superagi.vector_store.document import Document
 
-_TABLE_NAME_RE = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]{0,62}$')
+_TABLE_NAME_RE = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_-]{0,62}$')
 
 
 def calc_pq_nseg(dim: int) -> int:
@@ -71,7 +71,7 @@ class GaussDB(VectorStore):
 
     def __init__(self, index_name: str, embedding_model: Any = None, db_url: Optional[str] = None):
         if not _TABLE_NAME_RE.match(index_name or ''):
-            raise ValueError(f"Invalid index (table) name: {index_name!r}")
+            raise ValueError(f"Invalid GaussDB vector table (index) name: {index_name!r}")
         self.index_name = index_name
         self.embedding_model = embedding_model
         url = db_url or get_config('GAUSSDB_VECTOR_DB_URL') or build_database_url()
