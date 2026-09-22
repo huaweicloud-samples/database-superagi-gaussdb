@@ -47,4 +47,19 @@ api.interceptors.request.use(config => {
   return config;
 });
 
+// 过期/无效凭证处理：401 时清除本地凭证并整页重载一次。
+// 本环境无凭证请求可用（DEV/本地部署），清除后启动链可正常走通，不会循环 401。
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (typeof window !== 'undefined' && error.response && error.response.status === 401) {
+      if (Cookies.get("accessToken")) {
+        Cookies.remove("accessToken");
+        window.location.reload();
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;
