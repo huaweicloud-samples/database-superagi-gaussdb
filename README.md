@@ -95,6 +95,7 @@ cd gui && npm install && npm run build && npm start   # 前端 http://localhost:
 ├── config_template.yaml          # GaussDB 形态配置模板
 └── .env.gaussdb.example          # 环境变量示例
 ```
+开源工具SpuerAGI兼容GaussDB
 
 ## Contributing
 
@@ -109,3 +110,5 @@ This project is licensed under the MIT-0 license.
 CODEOWNERS: @plafaithing
 
 ## Feedback
+
+Please use GitHub Issues: https://github.com/huaweicloud-samples/database-superagi-gaussdb/issues
